@@ -1,11 +1,5 @@
-// The Swift Programming Language
-// https://docs.swift.org/swift-book
-
-/// A macro that produces both a value and a string containing the
-/// source code that generated the value. For example,
+/// A macro that produces the boilerplate code for implementing a `Codable` class instance.
 ///
-///     #stringify(x + y)
-///
-/// produces a tuple `(x + y, "x + y")`.
-@freestanding(expression)
-public macro stringify<T>(_ value: T) -> (T, String) = #externalMacro(module: "ClassCodableMacros", type: "StringifyMacro")
+/// Generates the initialiser and its `CodingKeys` enum.
+@attached(member, names: named(init), named(CodingKeys))
+public macro ClassCodable() = #externalMacro(module: "ClassCodableMacros", type: "ClassCodableMacro")
