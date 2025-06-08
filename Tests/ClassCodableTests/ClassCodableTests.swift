@@ -14,7 +14,7 @@ let testMacros: [String: Macro.Type] = [
 #endif
 
 final class ClassCodableTests: XCTestCase {
-    func testClassCodable() {
+    func testClassCodableWithCodingKeys() {
         assertMacroExpansion(
         """
         @ClassCodable
@@ -32,11 +32,49 @@ final class ClassCodableTests: XCTestCase {
                 self.test1 = test1
                 self.test2 = test2
             }
+        
+            private enum CodingKeys: String, CodingKey {
+                case test1
+                case test2
+            }
         }
         """,
         macros: testMacros
         )
     }
+    
+    func testClassCodableWithCustomKey() {
+        assertMacroExpansion(
+        """
+        @ClassCodable
+        class Test {
+            var test1: String
+            @CustomCodableKey("name")
+            var test2: Int
+        }
+        """,
+        expandedSource: """
+        class Test {
+            var test1: String
+            @CustomCodableKey("name")
+            var test2: Int
+        
+            init(test1: String, test2: Int) {
+                self.test1 = test1
+                self.test2 = test2
+            }
+        
+            private enum CodingKeys: String, CodingKey {
+                case test1
+                case test2 = "name"
+            }
+        }
+        """,
+        macros: testMacros
+        )
+    }
+    
+    // MARK: With Diagnostics
     
     func testClassCodableOnStruct() {
         assertMacroExpansion(
