@@ -3,49 +3,75 @@ import SwiftSyntax
 import SwiftSyntaxBuilder
 import SwiftSyntaxMacros
 
-private extension ClassCodableMacro {
-    struct Property {
-        var id: TokenSyntax
-        var type: TypeSyntax
+private struct Property {
+    private var binding: PatternBindingSyntax?
+    private var attributes: AttributeListSyntax?
+    
+    var id: TokenSyntax
+    var type: TypeSyntax
+    
+    var name: String {
+        return id.text
+    }
+    
+    func asParam() -> String {
+        return "\(id): \(type)"
+    }
+    
+    func asProperty() -> String {
+        return "self.\(id) = \(id)"
+    }
+    
+    func asCase(custom: ExprSyntax? = nil) -> String {
+        if let custom {
+            return "case \(name) = \(custom)"
+        } else {
+            return "case \(name)"
+        }
+    }
+    
+    func get(attribute description: String) -> AttributeListSyntax.Element? {
+        return attributes?.first(
+            where: {
+                $0.as(AttributeSyntax.self)?
+                    .attributeName.as(IdentifierTypeSyntax.self)?
+                    .description == description
+            }
+        )
+    }
+}
+
+private extension Property {
+    init?(from variable: VariableDeclSyntax) {
+        self.binding = variable.bindings.first
+        self.attributes = variable.attributes
         
-        func asParams() -> String {
-            return "\(id): \(type)"
+        guard
+            let pattern = self.binding?.pattern.as(IdentifierPatternSyntax.self),
+            let typeAnnotation = self.binding?.typeAnnotation
+        else {
+            return nil
         }
         
-        func asProperties() -> String {
-            return "self.\(id) = \(id)"
-        }
+        self.id = pattern.identifier
+        self.type = typeAnnotation.type
     }
 }
 
 private extension ClassCodableMacro {
     static func initSyntax(from members: MemberBlockItemListSyntax) -> DeclSyntax {
-        let propertyDecls = members.compactMap { $0.decl.as(VariableDeclSyntax.self) }
-        let bindings = propertyDecls.compactMap { $0.bindings.first }
-        let propertyMap: [Property] = bindings.compactMap {
-            if let pattern = $0.pattern.as(IdentifierPatternSyntax.self),
-               let typeAnnotation = $0.typeAnnotation {
-                return .init(
-                    id: pattern.identifier,
-                    type: typeAnnotation.type
-                )
-            } else {
-                return nil
-            }
-        }
+        let propertyMap: [Property] = members
+            .compactMap { $0.decl.as(VariableDeclSyntax.self) }
+            .compactMap { .init(from: $0) }
         
         // Create expected macro structure
-        let params = propertyMap
-            .map { $0.asParams() }
-            .joined(separator: ", ")
-        let properties = propertyMap
-            .map { $0.asProperties() }
-            .joined(separator: "\n")
+        let params = propertyMap.map { $0.asParam() }
+        let properties = propertyMap.map { $0.asProperty() }
         
         return
             """
-            init(\(raw: params)) {
-                \(raw: properties)
+            init(\(raw: params.joined(separator: ", "))) {
+                \(raw: properties.joined(separator: "\n"))
             }
             """
     }
@@ -54,32 +80,23 @@ private extension ClassCodableMacro {
         let cases = members.compactMap { member -> String? in
             // Check if is a property
             guard
-                let propertyName = member
-                    .decl.as(VariableDeclSyntax.self)?
-                    .bindings.first?
-                    .pattern.as(IdentifierPatternSyntax.self)?
-                    .identifier.text
+                let variable = member.decl.as(VariableDeclSyntax.self),
+                let property = Property(from: variable)
             else {
                 return nil
             }
             
-            // Check for a CodableKey macro on it
-            if let customKeyMacro = member.decl.as(VariableDeclSyntax.self)?.attributes.first(
-                where: {
-                    $0.as(AttributeSyntax.self)?
-                        .attributeName.as(IdentifierTypeSyntax.self)?
-                        .description == CustomCodableKeyMacro.attributeName
-                }
-            ) {
-                // Uses the value in the Macro
+            // Check for a `CustomCodableKey` macro on it
+            if let customKeyMacro = property.get(attribute: CustomCodableKeyMacro.attributeName) {
+                // Uses the value in the macro
                 let customKeyValue = customKeyMacro.as(AttributeSyntax.self)!
                     .arguments!.as(LabeledExprListSyntax.self)!
                     .first!
                     .expression
                 
-                return "case \(propertyName) = \(customKeyValue)"
+                return property.asCase(custom: customKeyValue)
             } else {
-                return "case \(propertyName)"
+                return property.asCase()
             }
         }
         
