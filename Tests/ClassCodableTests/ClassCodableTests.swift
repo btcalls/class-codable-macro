@@ -74,6 +74,39 @@ final class ClassCodableTests: XCTestCase {
         )
     }
     
+    func testClassWithOptionalProperties() {
+        assertMacroExpansion(
+        """
+        @ClassCodable
+        class Test {
+            var test1: String = "Test1"
+            var test2: Int?
+            var test3: Int = 0
+        }
+        """,
+        expandedSource: """
+        class Test {
+            var test1: String = "Test1"
+            var test2: Int?
+            var test3: Int = 0
+        
+            init(test1: String = "Test1", test2: Int?, test3: Int = 0) {
+                self.test1 = test1
+                self.test2 = test2
+                self.test3 = test3
+            }
+        
+            private enum CodingKeys: String, CodingKey {
+                case test1
+                case test2
+                case test3
+            }
+        }
+        """,
+        macros: testMacros
+        )
+    }
+    
     // MARK: With Diagnostics
     
     func testClassCodableOnStruct() {

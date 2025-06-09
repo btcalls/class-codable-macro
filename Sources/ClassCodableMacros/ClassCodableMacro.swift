@@ -6,6 +6,7 @@ import SwiftSyntaxMacros
 private struct Property {
     private var binding: PatternBindingSyntax?
     private var attributes: AttributeListSyntax?
+    private var initializer: InitializerClauseSyntax?
     
     var id: TokenSyntax
     var type: TypeSyntax
@@ -15,7 +16,11 @@ private struct Property {
     }
     
     func asParam() -> String {
-        return "\(id): \(type)"
+        if let value = initializer?.value {
+            return "\(id): \(type)= \(value)"
+        } else {
+            return "\(id): \(type)"
+        }
     }
     
     func asProperty() -> String {
@@ -45,6 +50,7 @@ private extension Property {
     init?(from variable: VariableDeclSyntax) {
         self.binding = variable.bindings.first
         self.attributes = variable.attributes
+        self.initializer = self.binding?.initializer
         
         guard
             let pattern = self.binding?.pattern.as(IdentifierPatternSyntax.self),
