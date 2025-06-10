@@ -5,6 +5,7 @@ import SwiftCompilerPlugin
 struct CodablePlugin: CompilerPlugin {
     let providingMacros: [Macro.Type] = [
         ClassCodableMacro.self,
+        ClassEncodableMacro.self,
         CustomCodableKeyMacro.self,
     ]
 }

@@ -10,14 +10,15 @@ import ClassCodableMacros
 
 let testMacros: [String: Macro.Type] = [
     "ClassCodable": ClassCodableMacro.self,
+    "ClassEncodable": ClassEncodableMacro.self,
 ]
 #endif
 
 final class ClassCodableTests: XCTestCase {
-    func testClassCodableWithEncodableConformance() {
+    func testClassEncodableWithConformance() {
         assertMacroExpansion(
         """
-        @ClassCodable
+        @ClassEncodable
         class Test {
             var test1: String = "Test1"
             @CustomCodableKey("test_2")
