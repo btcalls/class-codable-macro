@@ -14,93 +14,45 @@ let testMacros: [String: Macro.Type] = [
 #endif
 
 final class ClassCodableTests: XCTestCase {
-    func testClassCodableWithCodingKeys() {
-        assertMacroExpansion(
-        """
-        @ClassCodable
-        class Test {
-            var test1: String
-            var test2: Int
-        }
-        """,
-        expandedSource: """
-        class Test {
-            var test1: String
-            var test2: Int
-        
-            init(test1: String, test2: Int) {
-                self.test1 = test1
-                self.test2 = test2
-            }
-        
-            private enum CodingKeys: String, CodingKey {
-                case test1
-                case test2
-            }
-        }
-        """,
-        macros: testMacros
-        )
-    }
-    
-    func testClassCodableWithCustomKey() {
-        assertMacroExpansion(
-        """
-        @ClassCodable
-        class Test {
-            var test1: String
-            @CustomCodableKey("name")
-            var test2: Int
-        }
-        """,
-        expandedSource: """
-        class Test {
-            var test1: String
-            @CustomCodableKey("name")
-            var test2: Int
-        
-            init(test1: String, test2: Int) {
-                self.test1 = test1
-                self.test2 = test2
-            }
-        
-            private enum CodingKeys: String, CodingKey {
-                case test1
-                case test2 = "name"
-            }
-        }
-        """,
-        macros: testMacros
-        )
-    }
-    
-    func testClassWithOptionalProperties() {
+    func testClassCodableWithEncodableConformance() {
         assertMacroExpansion(
         """
         @ClassCodable
         class Test {
             var test1: String = "Test1"
-            var test2: Int?
-            var test3: Int = 0
+            @CustomCodableKey("test_2")
+            var test2: Int
+            var test3: String?
         }
         """,
         expandedSource: """
         class Test {
             var test1: String = "Test1"
-            var test2: Int?
-            var test3: Int = 0
+            @CustomCodableKey("test_2")
+            var test2: Int
+            var test3: String?
         
-            init(test1: String = "Test1", test2: Int?, test3: Int = 0) {
+            private enum CodingKeys: String, CodingKey {
+                case test1
+                case test2 = "test_2"
+                case test3
+            }
+        
+            init(test1: String = "Test1", test2: Int, test3: String? = nil) {
                 self.test1 = test1
                 self.test2 = test2
                 self.test3 = test3
             }
         
-            private enum CodingKeys: String, CodingKey {
-                case test1
-                case test2
-                case test3
+            func encode(to encoder: any Encoder) throws {
+                var container = encoder.container(keyedBy: CodingKeys.self)
+                try container.encode(test1, forKey: .test1)
+                try container.encode(test2, forKey: .test2)
+                try container.encodeIfPresent(test3, forKey: .test3)
             }
+        }
+        
+        extension Test: Encodable {
         }
         """,
         macros: testMacros
@@ -118,6 +70,9 @@ final class ClassCodableTests: XCTestCase {
         """,
         expandedSource: """
         struct Test {
+        }
+        
+        extension Test: Encodable {
         }
         """,
         diagnostics: [
