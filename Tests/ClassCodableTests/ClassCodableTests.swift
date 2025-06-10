@@ -106,6 +106,58 @@ final class ClassCodableTests: XCTestCase {
         )
     }
     
+    func testClassCodableWithConformance() {
+        assertMacroExpansion(
+        """
+        @ClassCodable
+        class Test {
+            var test1: String = "Test1"
+            @CustomCodableKey("test_2")
+            var test2: Int
+            var test3: String?
+        }
+        """,
+        expandedSource: """
+        class Test {
+            var test1: String = "Test1"
+            @CustomCodableKey("test_2")
+            var test2: Int
+            var test3: String?
+        
+            private enum CodingKeys: String, CodingKey {
+                case test1
+                case test2 = "test_2"
+                case test3
+            }
+        
+            init(test1: String = "Test1", test2: Int, test3: String? = nil) {
+                self.test1 = test1
+                self.test2 = test2
+                self.test3 = test3
+            }
+        
+            required init(from decoder: any Decoder) throws {
+                let container = try decoder.container(keyedBy: CodingKeys.self)
+                test1 = try container.decode(String.self, forKey: .test1)
+                test2 = try container.decode(Int.self, forKey: .test2)
+                test3 = try container.decodeIfPresent(String.self, forKey: .test3)
+            }
+        
+            func encode(to encoder: any Encoder) throws {
+                var container = encoder.container(keyedBy: CodingKeys.self)
+                try container.encode(test1, forKey: .test1)
+                try container.encode(test2, forKey: .test2)
+                try container.encodeIfPresent(test3, forKey: .test3)
+            }
+        }
+        
+        extension Test: Codable {
+        }
+        """,
+        macros: testMacros
+        )
+    }
+    
     // MARK: With Diagnostics
     
     func testClassCodableOnStruct() {

@@ -10,14 +10,14 @@ class Person {
     var middleName: String?
 }
 
-@ClassDecodable
+@ClassEncodable
 class Book {
     @CustomCodableKey("birth_id")
     var id: String
     var title: String
 }
 
-@ClassEncodable
+@ClassDecodable
 class Genre {
     var id: String
     var name: String
