@@ -1,10 +1,3 @@
-//
-//  Models.swift
-//  ClassCodable
-//
-//  Created by Jason Jon Carreos on 10/6/2025.
-//
-
 import SwiftSyntax
 
 struct Property {
@@ -46,6 +39,20 @@ struct Property {
             return "try container.encodeIfPresent(\(id), forKey: .\(id))"
         } else {
             return "try container.encode(\(id), forKey: .\(id))"
+        }
+    }
+    
+    func asDecodable() -> String {
+        if isOptional {
+            var type: TypeSyntax = self.type
+            
+            if let optionalType = type.trimmed.as(OptionalTypeSyntax.self) {
+                type = optionalType.wrappedType                
+            }
+            
+            return "\(id) = try container.decodeIfPresent(\(type.trimmed).self, forKey: .\(id))"
+        } else {
+            return "\(id) = try container.decode(\(type.trimmed).self, forKey: .\(id))"
         }
     }
     

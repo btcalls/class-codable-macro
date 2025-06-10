@@ -23,7 +23,8 @@ public struct ClassCodableMacro: MemberMacro {
         return [
             casesSyntax(from: members),
             initSyntax(from: members),
-            ClassEncodableMacro.encodableSyntax(from: members)
+            ClassDecodableMacro.decodableSyntax(from: members),
+            ClassEncodableMacro.encodableSyntax(from: members),
         ]
     }
 }
@@ -36,7 +37,7 @@ extension ClassCodableMacro: ExtensionMacro {
         conformingTo protocols: [TypeSyntax],
         in context: some MacroExpansionContext
     ) throws -> [ExtensionDeclSyntax] {
-        return [try ExtensionDeclSyntax("extension \(type): Encodable {}")]
+        return [try ExtensionDeclSyntax("extension \(type): Codable {}")]
     }
 }
 

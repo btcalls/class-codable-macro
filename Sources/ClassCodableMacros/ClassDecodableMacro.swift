@@ -5,7 +5,7 @@ import SwiftSyntaxMacros
 
 // MARK: Main
 
-public struct ClassEncodableMacro: MemberMacro {
+public struct ClassDecodableMacro: MemberMacro {
     public static func expansion(
         of node: AttributeSyntax,
         providingMembersOf declaration: some DeclGroupSyntax,
@@ -21,12 +21,12 @@ public struct ClassEncodableMacro: MemberMacro {
         return [
             ClassCodableMacro.casesSyntax(from: members),
             ClassCodableMacro.initSyntax(from: members),
-            encodableSyntax(from: members),
+            decodableSyntax(from: members)
         ]
     }
 }
 
-extension ClassEncodableMacro: ExtensionMacro {
+extension ClassDecodableMacro: ExtensionMacro {
     public static func expansion(
         of node: AttributeSyntax,
         attachedTo declaration: some DeclGroupSyntax,
@@ -34,26 +34,26 @@ extension ClassEncodableMacro: ExtensionMacro {
         conformingTo protocols: [TypeSyntax],
         in context: some MacroExpansionContext
     ) throws -> [ExtensionDeclSyntax] {
-        return [try ExtensionDeclSyntax("extension \(type): Encodable {}")]
+        return [try ExtensionDeclSyntax("extension \(type): Decodable {}")]
     }
 }
 
 // MARK: Utilities
 
-extension ClassEncodableMacro {
-    static func encodableSyntax(from members: MemberBlockItemListSyntax) -> DeclSyntax {
+extension ClassDecodableMacro {
+    static func decodableSyntax(from members: MemberBlockItemListSyntax) -> DeclSyntax {
         let propertyMap: [Property] = members
             .compactMap { $0.decl.as(VariableDeclSyntax.self) }
             .compactMap { .init(from: $0) }
         
         // Create expected macro structure
-        let encodables = propertyMap.map { $0.asEncodable() }
+        let decodables = propertyMap.map { $0.asDecodable() }
         
         return
             """
-            func encode(to encoder: any Encoder) throws {
-                var container = encoder.container(keyedBy: \(raw: ClassCodableMacro.codableKeyName).self)
-                \(raw: encodables.joined(separator: "\n"))
+            required init(from decoder: any Decoder) throws {
+                let container = try decoder.container(keyedBy: \(raw: ClassCodableMacro.codableKeyName).self)
+                \(raw: decodables.joined(separator: "\n"))
             }
             """
     }
